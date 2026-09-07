@@ -1,0 +1,53 @@
+name: Protection Audit
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC (09:00 Helsinki)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch protection config
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ISSUES=0
+
+          echo "=== Protection Audit: $REPO ==="
+
+          # Uses rules/branches/main (readable with contents:read) instead of
+          # /rulesets and /branches/main/protection, which return 403 for the
+          # default GITHUB_TOKEN on private repos and caused false positives.
+          # ponytail: old-protection and bypass-actor checks dropped — they need
+          # admin scope the workflow token never has; audit those via
+          # verify-protection.sh locally instead.
+          RULES=$(gh api "repos/${REPO}/rules/branches/main" 2>/dev/null || echo '[]')
+
+          PR_RULE=$(echo "$RULES" | jq '[.[] | select(.type == "pull_request")] | length')
+          if [[ "$PR_RULE" == "0" ]]; then
+            echo "::error::No active pull_request rule on main — 'Protect main' ruleset missing or disabled"
+            ISSUES=$((ISSUES + 1))
+          else
+            echo "pull_request rule: active"
+          fi
+
+          CHECKS=$(echo "$RULES" | jq '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[]?.context] | length')
+          if [[ "$CHECKS" == "0" ]]; then
+            echo "::warning::No required status checks on main"
+          else
+            echo "required status checks: ${CHECKS} configured"
+          fi
+
+          if [[ $ISSUES -gt 0 ]]; then
+            echo ""
+            echo "Fix: run protect-main.sh --update --cleanup on this repo"
+            exit 1
+          fi
+
+          echo "Protection audit passed"

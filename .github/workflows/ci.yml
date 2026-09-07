@@ -1,0 +1,260 @@
+name: CI
+# Template v2.3.0 — source: <pm repo>/hooks/ci-templates/ci.yml
+
+# pull_request only: pre-push hooks already run tests locally; a push-to-main
+# run after every merge doubled Actions minutes for no signal.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# gitleaks-action lists PR commits via the API; the default restricted
+# token lacks pull-requests read and the action crashes with 403
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect-and-test:
+    # Draft PRs skip the heavy suite; mark ready (or open a real PR) to run it.
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # gitleaks-action scans the pushed commit range; a shallow clone
+          # lacks the base commit and fails with "unknown revision"
+          fetch-depth: 0
+
+      # --- Node.js ---
+      - name: Detect Node.js
+        id: detect-node
+        run: test -f package.json && echo "detected=true" >> $GITHUB_OUTPUT || echo "detected=false" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        if: steps.detect-node.outputs.detected == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (Node.js)
+        if: steps.detect-node.outputs.detected == 'true'
+        run: npm ci
+
+      - name: Audit dependencies (Node.js)
+        if: steps.detect-node.outputs.detected == 'true'
+        run: npm audit --audit-level=high
+
+      - name: Build (Node.js)
+        if: steps.detect-node.outputs.detected == 'true'
+        run: npm run build --if-present
+
+      - name: Test with coverage (Node.js)
+        if: steps.detect-node.outputs.detected == 'true'
+        run: |
+          if grep -q '"test:coverage"' package.json 2>/dev/null; then
+            npm run test:coverage
+          elif grep -q '"test"' package.json 2>/dev/null; then
+            npm test --if-present
+          fi
+
+      # --- Python ---
+      - name: Detect Python
+        id: detect-python
+        run: |
+          if [ -f pyproject.toml ] || [ -f requirements.txt ] || [ -f setup.py ]; then
+            echo "detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "detected=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Python
+        if: steps.detect-python.outputs.detected == 'true'
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Cache pip
+        if: steps.detect-python.outputs.detected == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Check Python dependency pinning
+        if: steps.detect-python.outputs.detected == 'true'
+        run: |
+          for f in requirements.txt requirements-dev.txt; do
+            [ -f "$f" ] || continue
+            unpinned=$(grep -vE '^\s*(#|$|-r|-e|--)' "$f" | grep -vE '==|@|\.whl' || true)
+            if [ -n "$unpinned" ]; then
+              echo "::error::Unpinned dependencies in $f:"
+              echo "$unpinned"
+              exit 1
+            fi
+          done
+
+      - name: Install dependencies (Python)
+        if: steps.detect-python.outputs.detected == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt;
+          elif [ -f requirements.txt ]; then pip install -r requirements.txt;
+          else pip install .; fi
+
+      - name: Test with coverage (Python)
+        if: steps.detect-python.outputs.detected == 'true'
+        run: |
+          if python -m pytest --co -q tests/ 2>/dev/null | grep -q 'test'; then
+            pip install -q pytest-cov 2>/dev/null || true
+            pytest tests/ -v --tb=short --cov --cov-report=term-missing || true
+          else
+            echo "No tests found"
+          fi
+
+      # --- Rust ---
+      - name: Detect Rust
+        id: detect-rust
+        run: test -f Cargo.toml && echo "detected=true" >> $GITHUB_OUTPUT || echo "detected=false" >> $GITHUB_OUTPUT
+
+      - name: Cache Cargo
+        if: steps.detect-rust.outputs.detected == 'true'
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Rust system deps
+        if: steps.detect-rust.outputs.detected == 'true'
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libasound2-dev
+
+      - name: Build & Test (Rust)
+        if: steps.detect-rust.outputs.detected == 'true'
+        run: |
+          cargo build
+          cargo test
+
+      # --- Go ---
+      - name: Detect Go
+        id: detect-go
+        run: test -f go.mod && echo "detected=true" >> $GITHUB_OUTPUT || echo "detected=false" >> $GITHUB_OUTPUT
+
+      - name: Setup Go
+        if: steps.detect-go.outputs.detected == 'true'
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Test with coverage (Go)
+        if: steps.detect-go.outputs.detected == 'true'
+        run: go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out
+
+      # --- Smoke tests (opt-in) ---
+      - name: Smoke test
+        run: |
+          if [ -f Makefile ] && grep -q '^smoke' Makefile; then
+            make smoke
+          elif [ -f package.json ] && grep -q '"smoke"' package.json; then
+            npm run smoke
+          fi
+
+      # --- Gitleaks ---
+      - name: Run gitleaks
+        # Dependabot PRs run with a read-only token; gitleaks-action
+        # crashes with 403 when listing PR commits
+        if: github.actor != 'dependabot[bot]'
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- SAST (Semgrep) ---
+      - name: Run Semgrep SAST
+        if: github.actor != 'dependabot[bot]'
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/default
+            p/owasp-top-ten
+
+      # --- Trivy filesystem scan (dependency CVEs) ---
+      - name: Trivy fs scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      # --- Docker ---
+      - name: Detect Dockerfile
+        id: detect-docker
+        run: |
+          if find . -maxdepth 3 -name "Dockerfile" -not -path "./.git/*" | grep -q .; then
+            echo "detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "detected=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Detect docker-compose
+        id: detect-compose
+        run: |
+          if [ -f docker-compose.yml ] || [ -f docker-compose.yaml ] || [ -f compose.yaml ] || [ -f compose.yml ]; then
+            echo "detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "detected=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Docker image (single Dockerfile)
+        if: steps.detect-docker.outputs.detected == 'true' && steps.detect-compose.outputs.detected == 'false'
+        run: |
+          DOCKERFILE=$(find . -maxdepth 3 -name "Dockerfile" -not -path "./.git/*" | head -1)
+          CONTEXT=$(dirname "$DOCKERFILE")
+          docker build -t ci-scan:latest -f "$DOCKERFILE" "$CONTEXT"
+
+      - name: Build Docker images (compose)
+        if: steps.detect-compose.outputs.detected == 'true'
+        run: docker compose build 2>/dev/null || docker-compose build
+
+      - name: Trivy image scan
+        if: steps.detect-docker.outputs.detected == 'true' && steps.detect-compose.outputs.detected == 'false'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ci-scan:latest'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Trivy compose image scan
+        if: steps.detect-compose.outputs.detected == 'true'
+        run: |
+          docker images --format '{{.Repository}}:{{.Tag}}' | grep -v '<none>' | while read img; do
+            echo "--- Scanning $img ---"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:latest image --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed "$img"
+          done
+
+      # --- License compliance ---
+      - name: Check npm licenses
+        if: steps.detect-node.outputs.detected == 'true'
+        run: |
+          npx license-checker@25.0.1 --production \
+            --failOn "GPL-2.0;GPL-3.0;AGPL-1.0;AGPL-3.0;LGPL-2.0;LGPL-2.1;LGPL-3.0" \
+            --summary
+
+      - name: Check Python licenses
+        if: steps.detect-python.outputs.detected == 'true'
+        run: |
+          pip install -q pip-licenses
+          pip-licenses \
+            --fail-on="GNU General Public License v2 (GPLv2);GNU General Public License v3 (GPLv3);GNU Affero General Public License v3 (AGPLv3);GNU Lesser General Public License v2 (LGPLv2);GNU Lesser General Public License v2 or later (LGPLv2+);GNU Lesser General Public License v3 (LGPLv3)" \
+            --format=plain

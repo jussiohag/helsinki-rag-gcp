@@ -1,0 +1,30 @@
+# Standard ignores
+private/
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+target/
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Claude Code settings (not the instruction files — those are tracked)
+.claude/
+.agents/
+.playwright-mcp/
+test-results/
+
+# NOTE: CLAUDE.md, AGENTS.md, .hooks-config, .githooks/ are tracked
+# and safe in private repos. Before making ANY repo public, run:
+#   <pm repo>/hooks/pre-publish-check.sh <path>
+# to remove them from tracking and scrub history if needed.
