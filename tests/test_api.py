@@ -59,6 +59,12 @@ def test_ask_happy_path(client: TestClient, turnlog_path: Path):
     assert body["no_answer"] is False
     assert body["citations"] == ["1"]
     assert "Kannel Library" in body["answer"]
+    assert body["guard"] == "ok"
+    assert len(body["passages"]) == 1
+    assert body["passages"][0]["id"] == "1"
+    assert body["passages"][0]["title"] == "Kannel Library"
+    assert body["passages"][0]["source_url"] == ""
+    assert body["passages"][0]["score"] == 3
     for stage in ("guard", "retrieve", "generate", "log", "total"):
         assert stage in body["latency_ms"]
         assert isinstance(body["latency_ms"][stage], int)
@@ -90,6 +96,8 @@ def test_ask_no_answer_when_no_passages_found(turnlog_path: Path):
     assert response.status_code == 200
     body = response.json()
     assert body["no_answer"] is True
+    assert body["passages"] == []
+    assert body["guard"] == "ok"
 
     turns = _read_turns(turnlog_path)
     assert turns[0]["outcome"] == "no_answer"
@@ -121,3 +129,10 @@ def test_default_app_uses_local_adapters():
     import hrag.api as api_module
 
     assert isinstance(api_module.get_adapters().retriever, LocalRetriever)
+
+
+def test_root_serves_html_ui(client: TestClient):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "helsinki-rag-gcp" in response.text
