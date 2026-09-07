@@ -1,0 +1,368 @@
+<title>helsinki-rag-gcp</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #fafafa;
+    --panel: #ffffff;
+    --border: #dcdcdc;
+    --text: #1a1a1a;
+    --muted: #666666;
+    --accent: #0b5fff;
+    --ok: #1a7f37;
+    --bad: #b3261e;
+    --cite: #fff3b0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+      sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); margin-top: 0; margin-bottom: 24px; font-size: 0.95rem; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+  textarea, select {
+    width: 100%;
+    font: inherit;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+  .row > div { flex: 1; min-width: 140px; }
+  .examples { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #fff;
+    padding: 6px 12px;
+  }
+  button.example { font-size: 0.85rem; color: var(--accent); border-color: var(--accent); }
+  button.submit {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 600;
+    padding: 8px 20px;
+    margin-top: 12px;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .answer { font-size: 1.05rem; white-space: pre-wrap; }
+  mark.cite {
+    background: var(--cite);
+    padding: 0 3px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  .meta { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+  .guard-ok { color: var(--ok); font-weight: 600; }
+  .guard-bad { color: var(--bad); font-weight: 600; }
+  .error { color: var(--bad); font-weight: 600; }
+  .latency-bar { margin: 4px 0; }
+  .latency-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 0.85rem; }
+  .latency-label { width: 90px; color: var(--muted); }
+  .latency-track {
+    flex: 1;
+    background: #eee;
+    border-radius: 4px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .latency-fill { height: 100%; background: var(--accent); }
+  .latency-fill.over { background: var(--bad); }
+  .latency-value { width: 130px; text-align: right; color: var(--muted); }
+  .passages { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .passage-card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    background: #fff;
+  }
+  .passage-card.cited { border-color: var(--accent); background: #f3f7ff; }
+  .passage-title { font-weight: 600; }
+  .passage-title .tag {
+    font-size: 0.7rem;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 0 4px;
+    margin-left: 6px;
+  }
+  .passage-text { font-size: 0.9rem; margin: 4px 0; }
+  .passage-foot { font-size: 0.78rem; color: var(--muted); display: flex; gap: 12px; }
+  footer { margin-top: 32px; font-size: 0.8rem; color: var(--muted); }
+  #result { display: none; }
+  #result.visible { display: block; }
+  h2 { font-size: 1rem; margin: 20px 0 6px; }
+</style>
+
+<h1>helsinki-rag-gcp</h1>
+<p class="subtitle">
+  Ask a question about Helsinki public service points. Answers cite the
+  retrieved passages; nothing is invented outside them.
+</p>
+
+<div class="panel">
+  <label for="question">Question</label>
+  <textarea id="question" placeholder="Kirjoita kysymys tähän...">Missä sijaitsee Kallion kirjasto</textarea>
+
+  <div class="examples">
+    <button type="button" class="example" data-q="Missä sijaitsee Kallion kirjasto">
+      Kirjasto (library)
+    </button>
+    <button type="button" class="example" data-q="Missä sijaitsee Päiväkoti Kannel">
+      Päiväkoti (daycare)
+    </button>
+    <button type="button" class="example" data-q="Missä sijaitsee Vuosaaren terveysasema">
+      Terveysasema (health station)
+    </button>
+  </div>
+
+  <div class="row">
+    <div>
+      <label for="language">Language</label>
+      <select id="language">
+        <option value="fi" selected>fi</option>
+        <option value="sv">sv</option>
+        <option value="en">en</option>
+      </select>
+    </div>
+    <div>
+      <label for="channel">Channel</label>
+      <select id="channel">
+        <option value="web" selected>web</option>
+        <option value="voice">voice</option>
+      </select>
+    </div>
+  </div>
+
+  <button type="button" class="submit" id="submit">Ask</button>
+  <div id="error" class="error" style="margin-top: 10px;"></div>
+</div>
+
+<div id="result" class="panel">
+  <h2>Answer</h2>
+  <div id="answer" class="answer"></div>
+  <div id="meta" class="meta"></div>
+
+  <h2>Latency</h2>
+  <div id="latency" class="latency-bar"></div>
+
+  <h2>Guard</h2>
+  <div id="guard"></div>
+
+  <h2>Passages</h2>
+  <div id="passages" class="passages"></div>
+</div>
+
+<footer id="footer">Loading adapter info...</footer>
+
+<script>
+  // Budgets in ms per stage, from docs/LATENCY.md. "log" is async and has
+  // no budget bar; perceived total is guard + retrieve + generate vs 1500.
+  var BUDGETS = { guard: 50, retrieve: 150, generate: 800 };
+  var MAX_PASSAGES = 20; // bounded render loop
+
+  function el(id) { return document.getElementById(id); }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function highlightCitations(text, citations) {
+    var escaped = escapeHtml(text);
+    var seen = {};
+    for (var i = 0; i < citations.length && i < MAX_PASSAGES; i++) {
+      var id = citations[i];
+      if (seen[id]) continue;
+      seen[id] = true;
+      var pattern = new RegExp("\\\\[" + id.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&") + "\\\\]", "g");
+      escaped = escaped.replace(pattern, '<mark class="cite">[' + escapeHtml(id) + "]</mark>");
+    }
+    return escaped;
+  }
+
+  function renderLatency(latencyMs) {
+    var container = el("latency");
+    container.innerHTML = "";
+    var stages = ["guard", "retrieve", "generate", "log", "total"];
+    for (var i = 0; i < stages.length; i++) {
+      var stage = stages[i];
+      if (!(stage in latencyMs)) continue;
+      var value = latencyMs[stage];
+      var budget = BUDGETS[stage];
+      var row = document.createElement("div");
+      row.className = "latency-row";
+
+      var label = document.createElement("div");
+      label.className = "latency-label";
+      label.textContent = stage;
+      row.appendChild(label);
+
+      var track = document.createElement("div");
+      track.className = "latency-track";
+      var fill = document.createElement("div");
+      var pct = budget ? Math.min(100, (value / budget) * 100) : 100;
+      fill.className = "latency-fill" + (budget && value > budget ? " over" : "");
+      fill.style.width = pct + "%";
+      track.appendChild(fill);
+      row.appendChild(track);
+
+      var valueEl = document.createElement("div");
+      valueEl.className = "latency-value";
+      valueEl.textContent = value + " ms" + (budget ? " / " + budget + " ms budget" : " (async, no budget)");
+      row.appendChild(valueEl);
+
+      container.appendChild(row);
+    }
+  }
+
+  function renderPassages(passages, citations) {
+    var container = el("passages");
+    container.innerHTML = "";
+    if (passages.length === 0) {
+      container.textContent = "No passages retrieved.";
+      return;
+    }
+    var citedSet = {};
+    for (var c = 0; c < citations.length; c++) citedSet[citations[c]] = true;
+
+    for (var i = 0; i < passages.length && i < MAX_PASSAGES; i++) {
+      var p = passages[i];
+      var card = document.createElement("div");
+      card.className = "passage-card" + (citedSet[p.id] ? " cited" : "");
+
+      var title = document.createElement("div");
+      title.className = "passage-title";
+      title.textContent = p.title;
+      if (citedSet[p.id]) {
+        var tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = "cited [" + p.id + "]";
+        title.appendChild(tag);
+      }
+      card.appendChild(title);
+
+      var text = document.createElement("div");
+      text.className = "passage-text";
+      text.textContent = p.text;
+      card.appendChild(text);
+
+      var foot = document.createElement("div");
+      foot.className = "passage-foot";
+      var scoreSpan = document.createElement("span");
+      scoreSpan.textContent = "score " + p.score;
+      foot.appendChild(scoreSpan);
+      if (p.source_url) {
+        var link = document.createElement("a");
+        link.href = p.source_url;
+        link.textContent = "source";
+        link.target = "_blank";
+        link.rel = "noopener";
+        foot.appendChild(link);
+      }
+      card.appendChild(foot);
+
+      container.appendChild(card);
+    }
+  }
+
+  function submitQuestion() {
+    var question = el("question").value.trim();
+    var language = el("language").value;
+    var channel = el("channel").value;
+    var errorEl = el("error");
+    var resultEl = el("result");
+    var submitBtn = el("submit");
+
+    errorEl.textContent = "";
+    resultEl.classList.remove("visible");
+    if (!question) {
+      errorEl.textContent = "Type a question first.";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Asking...";
+
+    fetch("/ask", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ question: question, language: language, channel: channel }),
+    })
+      .then(function (response) {
+        return response.json().then(function (body) {
+          return { ok: response.ok, body: body };
+        });
+      })
+      .then(function (result) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Ask";
+        if (!result.ok) {
+          errorEl.textContent = "Blocked: " + (result.body.detail || "request rejected");
+          return;
+        }
+        var body = result.body;
+        el("answer").innerHTML = body.no_answer
+          ? "<em>No matching answer found.</em>"
+          : highlightCitations(body.answer, body.citations);
+        el("meta").textContent =
+          "Model: " + body.model + " | Citations: " + (body.citations.join(", ") || "none");
+        var guardEl = el("guard");
+        guardEl.textContent = body.guard;
+        guardEl.className = body.guard === "ok" ? "guard-ok" : "guard-bad";
+        renderLatency(body.latency_ms);
+        renderPassages(body.passages, body.citations);
+        resultEl.classList.add("visible");
+      })
+      .catch(function (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Ask";
+        errorEl.textContent = "Request failed: " + err;
+      });
+  }
+
+  el("submit").addEventListener("click", submitQuestion);
+  var examples = document.querySelectorAll(".example");
+  for (var i = 0; i < examples.length; i++) {
+    examples[i].addEventListener("click", function (evt) {
+      el("question").value = evt.currentTarget.getAttribute("data-q");
+    });
+  }
+
+  fetch("/healthz")
+    .then(function (r) { return r.json(); })
+    .then(function (body) {
+      var adapters = body.adapters || {};
+      var parts = [];
+      for (var key in adapters) {
+        if (Object.prototype.hasOwnProperty.call(adapters, key)) {
+          parts.push(key + "=" + adapters[key]);
+        }
+      }
+      el("footer").textContent = "Active adapters: " + (parts.join(", ") || "unknown");
+    })
+    .catch(function () {
+      el("footer").textContent = "Active adapters: unavailable";
+    });
+</script>

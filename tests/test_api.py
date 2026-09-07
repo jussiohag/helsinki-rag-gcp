@@ -129,3 +129,10 @@ def test_default_app_uses_local_adapters():
     import hrag.api as api_module
 
     assert isinstance(api_module.get_adapters().retriever, LocalRetriever)
+
+
+def test_root_serves_html_ui(client: TestClient):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "helsinki-rag-gcp" in response.text
