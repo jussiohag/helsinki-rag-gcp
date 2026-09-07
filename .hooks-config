@@ -3,3 +3,8 @@
 # skip_qa=true
 # skip_push_tests=true
 # skip_readme_badges=true
+
+# Python/uv project: pre-push test detection does not know uv; the gate is the
+# pre-commit smoke test below plus CI.
+skip_push_tests=true
+smoke_test=make test

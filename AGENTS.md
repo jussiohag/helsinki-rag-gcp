@@ -1,12 +1,36 @@
 # helsinki-rag-gcp
 
 ## Project
-TODO: add project description
+Public-service knowledge assistant on GCP, europe-north1. FastAPI on Cloud Run,
+Vertex AI Search retrieval, Gemini generation, Model Armor input guard, BigQuery
+turn log, evaluation gate in CI. Corpus: 21,498 Helsinki service points (open
+data). Every cloud adapter has a local twin so tests and the eval run offline.
 
 ## Commands
-- Build: N/A
-- Test: N/A
-- Lint: N/A
+- Setup: `make setup` (uv sync)
+- Test: `make test` (pre-commit smoke gate)
+- Lint: `make lint` (ruff)
+- Eval: `make eval` (golden set, hit@5 and citation gate, exits 1 below threshold)
+- Run: `make run` (uvicorn on :8080)
+- Ingest: `make ingest` (CSV to Vertex AI Search JSONL)
+- Terraform: `make tf-validate` (needs terraform; CI installs it)
+
+## Layout
+- `src/hrag/ports.py` dataclasses and protocols shared by all modules, do not change
+- `src/hrag/retrieval/` `local.py` keyword retriever, `vertex.py` Vertex AI Search adapter
+- `src/hrag/generator.py`, `guard.py`, `turnlog.py`, `api.py` the request path
+- `eval/` golden set and runner, `scripts/` ingestion, `infra/terraform/` GCP resources
+- Design: `docs/plans/2026-09-07-helsinki-rag-gcp.md`
+
+## Python conventions
+- Type hints everywhere. Cloud clients are created lazily inside the adapter and only when
+  the selecting env var is set (`HRAG_RETRIEVER=vertex`, `HRAG_GENERATOR=gemini`,
+  `HRAG_GUARD=model_armor`, `HRAG_TURNLOG=bigquery`). Default is always local.
+- Cloud adapters are unit-tested with a fake client; no test needs credentials or network.
+- Stage latencies (guard, retrieve, generate, log) are measured per request and returned.
+- Turn logs never contain the question text, only its hash, ids, model, latencies.
+- Every module gets `tests/test_<module>.py`. Tests first for behaviour changes.
+- Commits: conventional format, no Co-Authored-By, no tool attribution lines.
 
 ## Creating repositories
 - Use the `initialize-project` skill when creating or bootstrapping a repository.
