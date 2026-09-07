@@ -28,3 +28,10 @@ test-results/
 # and safe in private repos. Before making ANY repo public, run:
 #   ~/Desktop/coding/pm/hooks/pre-publish-check.sh <path>
 # to remove them from tracking and scrub history if needed.
+.venv/
+__pycache__/
+*.pyc
+build/
+turns/*.jsonl
+.terraform/
+*.tfstate*

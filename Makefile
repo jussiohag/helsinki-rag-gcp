@@ -1,15 +1,26 @@
-.PHONY: lint test build ci smoke
+.PHONY: setup lint test eval run ingest tf-validate smoke ci
 
-lint:
-	@echo "TODO: configure linter (eslint, ruff, clippy, golangci-lint)"
+setup:
+	uv sync --group dev
 
-test:
-	@echo "TODO: configure test runner (jest, pytest, cargo test, go test)"
+lint: setup
+	uv run ruff check src tests eval scripts
 
-build:
-	@echo "TODO: configure build (npm run build, cargo build, go build)"
+test: setup
+	uv run pytest -q
 
-smoke:
-	@echo "TODO: configure smoke tests"
+eval: setup
+	uv run python -m eval.run
 
-ci: lint test build
+run: setup
+	uv run uvicorn hrag.api:app --reload --port 8080
+
+ingest: setup
+	uv run python scripts/ingest_to_jsonl.py data/helsinki_service_points.csv build/documents.jsonl
+
+tf-validate:
+	cd infra/terraform && terraform fmt -check -recursive && terraform init -backend=false -input=false >/dev/null && terraform validate
+
+smoke: test
+
+ci: lint test eval
