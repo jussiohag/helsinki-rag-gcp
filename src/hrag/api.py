@@ -8,15 +8,18 @@ from __future__ import annotations
 import hashlib
 import time
 import uuid
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from hrag.config import Adapters, build_adapters
-from hrag.ports import Turn
+from hrag.ports import Passage, Turn
 
 app = FastAPI(title="helsinki-rag")
 _adapters = build_adapters()
+_STATIC_DIR = Path(__file__).parent / "static"
 
 
 def get_adapters() -> Adapters:
@@ -29,12 +32,26 @@ class AskRequest(BaseModel):
     language: str = "fi"
 
 
+class PassageOut(BaseModel):
+    id: str
+    title: str
+    text: str
+    source_url: str
+    score: float
+
+
 class AskResponse(BaseModel):
     answer: str
     citations: list[str]
     model: str
     no_answer: bool
     latency_ms: dict[str, int]
+    passages: list[PassageOut]
+    guard: str
+
+
+def _passage_out(p: Passage) -> PassageOut:
+    return PassageOut(id=p.id, title=p.title, text=p.text, source_url=p.source_url, score=p.score)
 
 
 def _elapsed_ms(start: float) -> int:
@@ -92,6 +109,8 @@ def ask(req: AskRequest, adapters: Adapters = Depends(get_adapters)) -> AskRespo
         model=answer.model,
         no_answer=answer.no_answer,
         latency_ms=latency,
+        passages=[_passage_out(p) for p in passages],
+        guard="ok",
     )
 
 
@@ -107,3 +126,8 @@ def _write_turn(adapters: Adapters, turn: Turn, latency: dict[str, int], total_s
 @app.get("/healthz")
 def healthz(adapters: Adapters = Depends(get_adapters)) -> dict[str, object]:
     return {"status": "ok", "adapters": adapters.names}
+
+
+@app.get("/")
+def index() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "index.html", media_type="text/html")
