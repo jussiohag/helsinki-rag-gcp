@@ -10,6 +10,19 @@ Vertex AI Search and Gemini in europe-north1, with an evaluation gate in CI
 and a per-stage latency budget. Everything also runs locally with no cloud
 account.
 
+## Features
+
+- Grounded answers with citations over 21,498 Helsinki service points
+- Browser UI at `/` and a JSON API at `/ask`
+- Per-stage latency (guard, retrieve, generate, log) measured on every
+  request and checked against a budget
+- Evaluation gate in CI: hit@5 and citation checks on a golden set, the
+  build fails below threshold
+- Every cloud adapter has a local twin, so tests and the eval run with no
+  cloud account
+- Terraform for Cloud Run, Vertex AI Search, Model Armor and BigQuery in
+  europe-north1
+
 ## Quick Start
 
 ```bash
@@ -43,17 +56,19 @@ path, the adapter/environment-variable contract, the data model, the
 content pipeline, the eval gate, the Terraform-managed infrastructure,
 and security notes.
 
-```text
- web / phone / chat channel
-          |
-   Cloud Run (FastAPI)  europe-north1
-     guard  -> Model Armor            (local: heuristic)
-     retrieve -> Vertex AI Search     (local: keyword over CSV)
-     generate -> Gemini 2.5 Flash     (local: template)
-     log -> BigQuery turn table       (local: JSONL)
-          |
-   answer + citations + latency per stage
+```mermaid
+flowchart TD
+    C[Browser UI or API client] -->|POST /ask| A[Cloud Run, FastAPI<br/>europe-north1]
+    A --> G[guard<br/>Model Armor<br/>local: heuristic]
+    G --> R[retrieve<br/>Vertex AI Search<br/>local: keyword over CSV]
+    R --> L[generate<br/>Gemini 2.5 Flash<br/>local: template]
+    L --> T[log<br/>BigQuery turn table<br/>local: JSONL]
+    T --> O[answer, citations,<br/>latency per stage]
+    O --> C
 ```
+
+Each stage is an adapter selected by an environment variable; the default
+is always the local twin.
 
 ## Eval
 
@@ -106,6 +121,18 @@ no download script in this repo; re-fetching it means pulling the
 same unit endpoint again and replacing the file, then re-running
 `scripts/ingest_to_jsonl.py` to rebuild the Vertex AI Search JSONL
 before re-importing it into the data store.
+
+## Development
+
+```bash
+make setup   # uv sync
+make lint    # ruff
+make test    # pytest, 45 tests, no network
+make eval    # golden set, exits 1 below threshold
+make ci      # all of the above
+```
+
+Conventions and layout: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
