@@ -110,6 +110,12 @@ def _print_table(result: EvalResult) -> None:
             print(f"  - {q}")
 
 
+def gate_failed(result: EvalResult) -> bool:
+    if result.hit_at_5 < THRESHOLDS["hit_at_5"]:
+        return True
+    return result.citation_ok is not None and result.citation_ok < THRESHOLDS["citation_ok"]
+
+
 def main() -> int:
     cases = load_golden(GOLDEN_PATH)
     generator = _load_generator()
@@ -122,10 +128,7 @@ def main() -> int:
     result = evaluate(cases, LocalRetriever(), generator)
     _print_table(result)
 
-    failed = result.hit_at_5 < THRESHOLDS["hit_at_5"]
-    if result.citation_ok is not None and result.citation_ok < THRESHOLDS["citation_ok"]:
-        failed = True
-    return 1 if failed else 0
+    return 1 if gate_failed(result) else 0
 
 
 if __name__ == "__main__":
