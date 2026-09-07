@@ -35,7 +35,7 @@ time-to-first-token is a sub-budget used to judge whether `generate` feels
 responsive versus merely fast on average, not something the client can read
 per request. If per-request first-token timing is ever needed, it would be
 a fifth stage split out of `generate` in `Turn.latency_ms` and `ports.py`,
-which is out of scope for this sprint.
+which is not implemented.
 
 ## When a stage breaches its budget
 

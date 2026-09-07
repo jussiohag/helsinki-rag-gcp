@@ -1,8 +1,8 @@
 # Plan: helsinki-rag-gcp (2026-09-07)
 
 ## Goal
-Port the Bedrock RAG demo (Helsinki service points, 21,498 rows) to GCP so the GCP
-stack is an artifact: Cloud Run + FastAPI, Vertex AI Search, Gemini, Model Armor, BigQuery,
+Build a retrieval-augmented question-answering service over Helsinki service
+points (21,498 rows) on GCP so the GCP stack is an artifact: Cloud Run + FastAPI, Vertex AI Search, Gemini, Model Armor, BigQuery,
 eval gate in CI, Terraform for europe-north1. Everything runs and is tested offline; the
 cloud adapters are real code exercised with fake clients. Deploying is one documented step.
 

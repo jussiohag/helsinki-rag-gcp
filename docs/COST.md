@@ -1,8 +1,8 @@
 # Monthly cost estimate
 
 All unit prices below are assumptions as of 2026-09-07, based on Google Cloud's
-published on-demand rate cards. Live queries against the pricing pages during
-this sprint returned inconsistent numbers from third-party summaries, and the
+published on-demand rate cards. Live queries against the pricing pages while
+writing this returned inconsistent numbers from third-party summaries, and the
 official Vertex AI pricing page did not return usable content to an automated
 fetch. Treat every number here as an estimate to re-check against
 `cloud.google.com/*/pricing` before it is used for a budget decision, not as
