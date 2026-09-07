@@ -82,4 +82,4 @@ Monthly cost estimate at 10k/100k questions: [`docs/COST.md`](docs/COST.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
