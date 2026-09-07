@@ -11,6 +11,7 @@ WORKDIR /app
 # enough to resolve the project itself.
 COPY pyproject.toml uv.lock ./
 COPY src ./src
+COPY data ./data
 
 RUN uv sync --no-dev --extra gcp
 
