@@ -4,9 +4,11 @@
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Public-service knowledge assistant on GCP. Same question-answering pattern as
-the AWS Bedrock version, ported to Cloud Run, Vertex AI Search and Gemini in
-europe-north1, with an evaluation gate in CI and a per-stage latency budget.
+Question-answering service over Helsinki's public service points. Ask in
+plain language, get a grounded answer with citations. Runs on Cloud Run,
+Vertex AI Search and Gemini in europe-north1, with an evaluation gate in CI
+and a per-stage latency budget. Everything also runs locally with no cloud
+account.
 
 ## Quick Start
 
@@ -66,7 +68,7 @@ p50_latency_ms     126.3  -
 p95_latency_ms     184.7  -
 ```
 
-Plan with sprint scope and the cloud adapter contract:
+Implementation plan and the cloud adapter contract:
 `docs/plans/2026-09-07-helsinki-rag-gcp.md`.
 
 ## Deploy
