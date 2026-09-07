@@ -10,7 +10,6 @@ eval/
 scripts/
 infra/
 docs/
-data/
 *.md
 .env
 .env.*
