@@ -7,6 +7,7 @@ do not care which one is behind the `Retriever` port.
 from __future__ import annotations
 
 import csv
+import re
 from pathlib import Path
 
 from hrag.ports import Passage
@@ -25,7 +26,7 @@ class LocalRetriever:
                 self.rows.append(row)
 
     def search(self, query: str, k: int) -> list[Passage]:
-        terms = [t for t in query.lower().split() if len(t) > 2]
+        terms = [t for t in re.findall(r"\w+", query.lower()) if len(t) > 2]
         if not terms:
             return []
         scored: list[tuple[int, dict[str, str]]] = []

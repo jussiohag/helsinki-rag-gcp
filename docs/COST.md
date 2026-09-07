@@ -6,7 +6,7 @@ this sprint returned inconsistent numbers from third-party summaries, and the
 official Vertex AI pricing page did not return usable content to an automated
 fetch. Treat every number here as an estimate to re-check against
 `cloud.google.com/*/pricing` before it is used for a budget decision, not as
-a quote. Where a price changes, only that one line needs editing — the totals
+a quote. Where a price changes, only that one line needs editing. The totals
 below are computed from the assumptions stated, not hardcoded separately.
 
 Two volumes: 10,000 questions/month and 100,000 questions/month. One request
@@ -37,10 +37,10 @@ billed processing time (roughly the `guard + retrieve + generate` budget in
 `docs/LATENCY.md`; `log` runs after the response and is not billed as request
 processing time in this estimate).
 
-- 10,000 requests: 10,000 vCPU-seconds, 5,000 GiB-seconds, 10,000 requests —
+- 10,000 requests: 10,000 vCPU-seconds, 5,000 GiB-seconds, 10,000 requests,
   all under the free-tier amounts above. Cost: $0.
 - 100,000 requests: 100,000 vCPU-seconds, 50,000 GiB-seconds, 100,000
-  requests — still under the free-tier amounts above. Cost: $0.
+  requests, still under the free-tier amounts above. Cost: $0.
 
 Cloud Run cost only becomes non-zero once monthly traffic pushes past the
 free-tier vCPU-second allowance, around 180,000 one-second requests/month at
@@ -74,7 +74,7 @@ overhead.
   $0.002. Combined: **under $0.01**.
 
 BigQuery cost is negligible at both volumes because turn rows carry no
-question text, only ids, a hash, and latencies — the table stays small
+question text, only ids, a hash, and latencies. The table stays small
 regardless of question volume.
 
 ## Totals

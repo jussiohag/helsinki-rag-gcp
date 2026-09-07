@@ -52,7 +52,7 @@ the edit log.
 
 - Comments explain WHY, assumptions, and non-obvious context. Never what the
   next line obviously does, and never what changed ("now uses X", "changed
-  from Y") — that belongs in the commit message.
+  from Y"). That belongs in the commit message.
 - Distribute context: short inline comments at logical sections of the body,
   not one giant block above the function. A doc comment longer than the
   function is a smell.
@@ -91,9 +91,9 @@ the edit log.
 - Config: .hooks-config, .hooks-allowlist
 
 ## Documentation
-- `docs/decisions/` — ADRs (MADR format, template: ~/Desktop/coding/pm/templates/adr-template.md)
-- `docs/plans/` — implementation plans (save here, not project root)
-- `docs/postmortems/` — sprint and feature retrospectives
+- `docs/decisions/` (ADRs, MADR format, template: ~/Desktop/coding/pm/templates/adr-template.md)
+- `docs/plans/` (implementation plans, save here, not project root)
+- `docs/postmortems/` (sprint and feature retrospectives)
 
 ## System reference
 - Full PM system docs: ~/Desktop/coding/pm/docs/PM-SYSTEM.md
