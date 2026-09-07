@@ -1,0 +1,57 @@
+# Shared gitleaks configuration for pre-commit hooks
+# Canonical location: ~/Desktop/coding/pm/hooks/.gitleaks.toml
+# Per-repo overrides: place .gitleaks.toml in repo root
+
+title = "Pre-commit hook gitleaks config"
+
+[extend]
+useDefault = true
+
+# Custom patterns for APIs used across the portfolio
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API key"
+regex = '''sk-ant-[a-zA-Z0-9_-]{80,}'''
+tags = ["key", "anthropic"]
+
+[[rules]]
+id = "fal-api-key"
+description = "fal.ai API key"
+regex = '''(?i)(?:fal[_-]?key|FAL_KEY)\s*[=:]\s*['"]?([a-zA-Z0-9_-]{20,})['"]?'''
+tags = ["key", "fal"]
+
+[[rules]]
+id = "modelslab-api-key"
+description = "ModelsLab API key"
+regex = '''(?i)(?:modelslab[_-]?key|MODELSLAB_KEY)\s*[=:]\s*['"]?([a-zA-Z0-9_-]{20,})['"]?'''
+tags = ["key", "modelslab"]
+
+[[rules]]
+id = "gemini-api-key"
+description = "Google Gemini API key"
+regex = '''AIza[a-zA-Z0-9_-]{35}'''
+tags = ["key", "google", "gemini"]
+
+[allowlist]
+description = "Global allowlist"
+paths = [
+    '''\.env\.example$''',
+    '''\.env\.sample$''',
+    '''\.env\.template$''',
+    '''private/''',
+    '''\.hooks-allowlist$''',
+    '''node_modules/''',
+    '''\.venv/''',
+    '''__pycache__/''',
+    '''\.git/''',
+]
+regexTarget = "line"
+regexes = [
+    '''sk-ant-\.\.\.''',
+    '''sk-\.\.\.''',
+    '''your-api-key-here''',
+    '''YOUR_.*_HERE''',
+    '''CHANGE_ME''',
+    '''example\.com''',
+    '''test@test''',
+]

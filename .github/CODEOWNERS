@@ -1,0 +1,6 @@
+# Default owner — all changes require review
+* @jussiohag
+
+# Agent-authored paths — flag for human review
+*.generated.* @jussiohag
+ai-generated/ @jussiohag
