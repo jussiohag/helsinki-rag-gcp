@@ -1,4 +1,4 @@
-"""Interfaces between sprints. Local implementations run with no network; GCP ones are env-gated."""
+"""Interfaces between components. Local implementations run with no network; GCP ones are env-gated."""
 
 from __future__ import annotations
 
