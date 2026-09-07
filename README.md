@@ -17,7 +17,29 @@ make run       # POST :8080/ask {"question":"Where is the nearest library in Kan
 ./deploy.sh    # build on Cloud Build, terraform apply, print the Cloud Run URL
 ```
 
+## Try it
+
+```bash
+make run   # starts the API on :8080 with the local, offline adapters
+```
+
+Then open `http://localhost:8080/` in a browser. You'll see a small page
+with a question box, three example questions in Finnish (a library, a
+daycare, a health station), and language/channel selectors. Submitting a
+question shows the generated answer with citation ids highlighted, a
+latency bar for each request stage against the budgets in
+`docs/LATENCY.md`, the retrieved passages as cards with their score and
+source link, the guard's decision, and which model answered. A blocked
+question comes back with its guard reason shown in red. A footer line
+reports which adapters (local or cloud) are currently active, read from
+`GET /healthz`.
+
 ## Architecture
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full request
+path, the adapter/environment-variable contract, the data model, the
+content pipeline, the eval gate, the Terraform-managed infrastructure,
+and security notes.
 
 ```text
  web / phone / chat channel
