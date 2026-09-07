@@ -1,60 +1,37 @@
 # helsinki-rag-gcp
 
 [![CI](https://github.com/jussiohag/helsinki-rag-gcp/actions/workflows/ci.yml/badge.svg)](https://github.com/jussiohag/helsinki-rag-gcp/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-TODO: add project description
-
-## Features
-
-- TODO: state the three most useful capabilities
-
-## Demo
-
-TODO: add a screenshot, short demo, or live HTTPS link for user-facing projects.
+Public-service knowledge assistant on GCP. Same question-answering pattern as
+the AWS Bedrock version, ported to Cloud Run, Vertex AI Search and Gemini in
+europe-north1, with an evaluation gate in CI and a per-stage latency budget.
 
 ## Quick Start
 
 ```bash
-# TODO: list prerequisites and copy-paste setup instructions
+make test      # offline, local retriever over the 21,498-row CSV
+make eval      # golden set, hit@5 and citation checks, fails below thresholds
+make run       # POST :8080/ask {"question":"Where is the nearest library in Kannelmäki?"}
 ```
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    U[User] --> A[Project interface]
-    A --> C[Core module]
-    C --> D[Data / external adapter]
+```text
+ web / phone / chat channel
+          |
+   Cloud Run (FastAPI)  europe-north1
+     guard  -> Model Armor            (local: heuristic)
+     retrieve -> Vertex AI Search     (local: keyword over CSV)
+     generate -> Gemini 2.5 Flash     (local: template)
+     log -> BigQuery turn table       (local: JSONL)
+          |
+   answer + citations + latency per stage
 ```
 
-Replace this diagram with the smallest accurate view of the real implementation. Label network and trust seams when relevant.
-
-## Usage
-
-TODO: show the primary workflow and common options.
-
-## Tech Stack
-
-- TODO: list technologies
-
-## Development
-
-```bash
-make lint    # run linter
-make test    # run tests
-make build   # build project
-make ci      # all of the above
-```
-
-## Security
-
-TODO: document permissions, network/data behavior, credentials, and vulnerability reporting. Link `SECURITY.md` when present.
-
-## Compatibility and Limitations
-
-- TODO: supported platforms/browsers/runtimes
-- TODO: known limitations and non-goals
+Eval gate, latency budget, cost estimate and Terraform: see
+`docs/plans/2026-09-07-helsinki-rag-gcp.md` and `infra/terraform/`.
 
 ## License
 
