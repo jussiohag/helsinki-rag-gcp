@@ -31,8 +31,21 @@ make run       # POST :8080/ask {"question":"Where is the nearest library in Kan
    answer + citations + latency per stage
 ```
 
-Eval gate, latency budget, cost estimate and Terraform: see
-`docs/plans/2026-09-07-helsinki-rag-gcp.md` and `infra/terraform/`.
+## Eval
+
+`make eval` runs the golden set against the local twins and fails the build
+below threshold. Output on main, 2026-09-07:
+
+```text
+metric             value  threshold
+hit_at_5            1.00  >= 0.8
+citation_ok         1.00  >= 1.0
+p50_latency_ms     126.3  -
+p95_latency_ms     184.7  -
+```
+
+Plan with sprint scope and the cloud adapter contract:
+`docs/plans/2026-09-07-helsinki-rag-gcp.md`.
 
 ## Deploy
 
