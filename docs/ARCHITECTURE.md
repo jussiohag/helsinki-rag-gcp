@@ -83,7 +83,7 @@ visible without ever storing what was blocked.
 Both generators (`TemplateGenerator`, `GeminiGenerator`) tag every fact
 with the id of the passage it came from, e.g. `[8215]`. `GeminiGenerator`
 goes one step further and drops any cited id that was not actually in the
-retrieved set — a model cannot cite a passage it was never shown. This is
+retrieved set. A model cannot cite a passage it was never shown. This is
 what `citation_ok` in the eval gate checks (see below).
 
 ## The adapter pattern
@@ -129,8 +129,8 @@ locally, none of them need to be set at all.
 
 ## Data model (`src/hrag/ports.py`)
 
-- **`Passage`**: one retrieved source row — `id`, `title`, `text`,
-  `source_url`, `score`. Both retrievers produce these; the generators and
+- **`Passage`**: one retrieved source row (`id`, `title`, `text`,
+  `source_url`, `score`). Both retrievers produce these; the generators and
   the API only ever see `Passage` objects, never raw CSV rows or raw
   Vertex AI Search results.
 - **`GuardResult`**: `allowed` (bool) and `reason` (string, empty when
@@ -141,7 +141,7 @@ locally, none of them need to be set at all.
   passages were retrieved at all).
 - **`Turn`**: one logged request. Carries `turn_id`, `channel`,
   `language`, `question_hash`, `passage_ids`, `cited_ids`, `model`,
-  `guard`, `latency_ms`, `outcome` — and deliberately never the question
+  `guard`, `latency_ms`, `outcome`, and deliberately never the question
   text itself (see Security notes).
 
 ## The content pipeline
@@ -149,7 +149,7 @@ locally, none of them need to be set at all.
 `scripts/ingest_to_jsonl.py` converts the source CSV into the JSONL format
 Vertex AI Search expects for a custom "unstructured with metadata" data
 store: one JSON document per line, with an `id`, a `structData` object
-(the structured, filterable fields — name, address, provider type, phone,
+(the structured, filterable fields: name, address, provider type, phone,
 url) and a base64-encoded plain-text `content` block (the same fields
 rendered as prose, which is what full-text search actually matches
 against). It streams the CSV row by row rather than loading it into
@@ -177,7 +177,7 @@ generation-based checks otherwise. For each question in
 
 Two thresholds fail the run: `hit_at_5 >= 0.8` and `citation_ok >= 1.0`.
 `gate_failed()` returns true if either is breached, and `main()` exits
-with status 1 in that case — which is what makes this a CI gate rather
+with status 1 in that case. That is what makes this a CI gate rather
 than a report: a regression in retrieval quality or a generator that
 invents a citation both fail the build.
 
@@ -185,35 +185,36 @@ invents a citation both fail the build.
 
 One line per resource in `main.tf`:
 
-- `google_project_service.apis` — enables the seven GCP APIs the stack
+- `google_project_service.apis`: enables the seven GCP APIs the stack
   needs (Cloud Run, Discovery Engine, Vertex AI, BigQuery, Artifact
   Registry, Cloud Build, Model Armor).
-- `google_artifact_registry_repository.hrag` — Docker repo the deployed
+- `google_artifact_registry_repository.hrag`: Docker repo the deployed
   container image is pushed to and pulled from.
-- `google_service_account.hrag` — the dedicated runtime identity for the
+- `google_service_account.hrag`: the dedicated runtime identity for the
   Cloud Run service (`hrag-api`), not the default compute service account.
-- `google_project_iam_member.hrag_sa_roles` — grants that service account
-  exactly four roles: `discoveryengine.viewer`, `aiplatform.user`,
-  `bigquery.dataEditor`, `logging.logWriter` — read-only search, model
-  invocation, write-only turn logging, and log writes; nothing broader.
-- `google_cloud_run_v2_service.hrag` — the deployed API container, with
+- `google_project_iam_member.hrag_sa_roles`: grants that service account
+  exactly four roles (`discoveryengine.viewer`, `aiplatform.user`,
+  `bigquery.dataEditor`, `logging.logWriter`), for read-only search,
+  model invocation, write-only turn logging, and log writes, nothing
+  broader.
+- `google_cloud_run_v2_service.hrag`: the deployed API container, with
   the eight `HRAG_*` env vars set to the cloud adapter values, scaling
   bounds, and concurrency from `variables.tf`.
-- `google_discovery_engine_data_store.hrag` — the Vertex AI Search corpus
+- `google_discovery_engine_data_store.hrag`: the Vertex AI Search corpus
   the ingested JSONL is imported into.
-- `google_discovery_engine_search_engine.hrag` — the search engine/serving
+- `google_discovery_engine_search_engine.hrag`: the search engine/serving
   config layered on top of that data store, with the LLM search add-on
   enabled.
-- `google_bigquery_dataset.hrag` + `google_bigquery_table.turns` — the
+- `google_bigquery_dataset.hrag` + `google_bigquery_table.turns`: the
   turn log's dataset and table; the table schema mirrors the `Turn`
   dataclass field for field, plus an extra `ts` timestamp column the
   application itself does not set.
 
 `deploy.sh` (run by hand, not by CI) does three things in order:
 
-1. `gcloud builds submit --tag <image> .` — builds the container on Cloud
+1. `gcloud builds submit --tag <image> .` builds the container on Cloud
    Build and pushes it to Artifact Registry.
-2. `terraform apply -var project=... -var region=... -var image=...` —
+2. `terraform apply -var project=... -var region=... -var image=...`
    applies the module above with that freshly built image.
 3. Reads the `service_url` Terraform output and prints it.
 
@@ -230,32 +231,32 @@ One line per resource in `main.tf`:
 - **Retrieved text is treated as data, not instructions.** The generator
   prompt (see `SYSTEM_PROMPT` in `generator.py`) wraps each passage in an
   explicit `<passage id="...">...</passage>` tag and instructs the model
-  to answer only from those passages, citing ids — the retrieved rows are
+  to answer only from those passages, citing ids. The retrieved rows are
   never concatenated into the instruction text itself.
 - **Guard failure is fail-closed.** `ModelArmorGuard` treats any transport
   or API error as a block rather than letting an unsanitized question
   through when the check itself is unavailable.
 - **Least-privilege service account.** The Cloud Run identity holds
-  exactly the four IAM roles listed above — no project-wide editor role,
+  exactly the four IAM roles listed above, no project-wide editor role,
   no access to resources this service does not use.
 
 ## Running it locally
 
 ```
 make setup   # uv sync
-make test    # 44 tests, all adapters mocked/local
+make test    # all adapters mocked/local
 make eval    # golden-set gate against LocalRetriever + TemplateGenerator
 make run     # starts the API on :8080 with local adapters
 ```
 
-No environment variables are required for any of the above — the four
+No environment variables are required for any of the above. The four
 `HRAG_*` selector variables default to the local adapters.
 
 ## Running the UI
 
 `make run`, then open `http://localhost:8080/` in a browser. The page is
 a single static HTML file (`src/hrag/static/index.html`) with inline CSS
-and vanilla JavaScript — no build step, no external CDN, so it works with
+and vanilla JavaScript (no build step, no external CDN), so it works with
 no network access. It offers three example questions (one library, one
 daycare, one health station), lets you pick a language and channel, and
 on submit calls `POST /ask` and renders the answer with citations
@@ -270,7 +271,7 @@ make eval
 ```
 
 Prints a small table (`hit_at_5`, `citation_ok`, `p50`/`p95` latency) and
-exits non-zero if either threshold is breached — this is the same command
+exits non-zero if either threshold is breached. This is the same command
 CI runs, so a failing eval locally means CI will fail too.
 
 ## What the local twins do not prove
@@ -279,12 +280,10 @@ Running everything locally is convenient and is what CI actually
 exercises, but it does not validate:
 
 - **Real Vertex AI Search ranking quality.** `LocalRetriever` does plain
-  keyword substring scoring with no stemming, no synonym handling, and no
-  semantic matching — a trailing punctuation mark glued to the last word
-  of a query (e.g. a `?`) can make its term fail to substring-match at
-  all, something a real search backend would not exhibit. `hit_at_5=1.00`
-  on the golden set says this scorer works for those specific questions,
-  not that Vertex AI Search will rank the same way.
+  keyword substring scoring with no stemming, no synonym handling, and
+  no semantic matching. `hit_at_5=1.00` on the golden set says this
+  scorer works for those specific questions, not that Vertex AI Search
+  will rank the same way.
 - **Model Armor's actual policy behavior.** `HeuristicGuard` matches a
   short fixed phrase list and a character-count limit; it does not
   exercise Model Armor's real prompt-injection or jailbreak detection
@@ -302,8 +301,8 @@ exercises, but it does not validate:
 - **A new channel adapter** (e.g. a phone/IVR front end instead of the
   web UI): add a new caller of `POST /ask` that sets `channel` to
   something other than `"web"`/`"voice"` and translates its own input
-  format to `{question, language, channel}` — nothing in the API needs to
-  change, `channel` is stored as free text on the `Turn`.
+  format to `{question, language, channel}`. Nothing in the API needs to
+  change; `channel` is stored as free text on the `Turn`.
 - **A new retriever**: implement the `Retriever` protocol
   (`search(query, k) -> list[Passage]`) in a new module, add a branch in
   `config.py`'s `build_adapters()` keyed on a new `HRAG_RETRIEVER` value,
@@ -312,7 +311,7 @@ exercises, but it does not validate:
 - **A new corpus**: point `LocalRetriever`/`scripts/ingest_to_jsonl.py` at
   a different CSV with the same column shape, or extend
   `build_document()`/`render_text()` if the new corpus has different
-  fields — then re-run the ingest script and re-import into the Vertex AI
+  fields, then re-run the ingest script and re-import into the Vertex AI
   Search data store. The golden set in `eval/golden.jsonl` will need new
   cases matching the new corpus's rows before the eval gate means
   anything again.

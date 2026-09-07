@@ -1,6 +1,7 @@
 .PHONY: setup lint test eval run ingest tf-validate smoke ci
 
 setup:
+	command -v uv >/dev/null 2>&1 || python3 -m pip install -q uv
 	uv sync --group dev
 
 lint: setup

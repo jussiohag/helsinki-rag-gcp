@@ -80,6 +80,31 @@ APIs enabled: `run`, `discoveryengine`, `aiplatform`, `bigquery`,
 Per-stage latency budget: [`docs/LATENCY.md`](docs/LATENCY.md).
 Monthly cost estimate at 10k/100k questions: [`docs/COST.md`](docs/COST.md).
 
+## Data
+
+`data/helsinki_service_points.csv` comes from the City of Helsinki
+Service Map (Palvelukartta) REST API v4, unit endpoint:
+`https://www.hel.fi/palvelukarttaws/rest/v4/unit/`. It holds 21,498
+service points across Helsinki, Espoo, Vantaa and Kauniainen,
+downloaded in 2026.
+
+License: see the Service Map open data terms at
+https://www.hel.fi/palvelukarttaws/restpages/index_en.html. As
+published there, the REST API's data is covered by the Creative
+Commons Attribution 4.0 International license (CC BY 4.0), and any
+reuse must credit "City of Helsinki Service Map
+(https://servicemap.hel.fi)" as the data's administrator.
+
+The phone numbers, addresses and URLs in the CSV are public
+service-point contact details published by the city, not personal
+data about individuals.
+
+This CSV is a static snapshot, not refreshed automatically. There is
+no download script in this repo; re-fetching it means pulling the
+same unit endpoint again and replacing the file, then re-running
+`scripts/ingest_to_jsonl.py` to rebuild the Vertex AI Search JSONL
+before re-importing it into the data store.
+
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
