@@ -1,5 +1,5 @@
 # Dependency Review — checks new dependencies for known vulnerabilities on PRs
-# Deployed by: ~/Desktop/coding/pm/hooks/deploy-ci.sh
+# Deployed by: <pm repo>/hooks/deploy-ci.sh
 name: Dependency Review
 on: pull_request
 

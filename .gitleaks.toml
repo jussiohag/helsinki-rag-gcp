@@ -1,5 +1,5 @@
 # Shared gitleaks configuration for pre-commit hooks
-# Canonical location: ~/Desktop/coding/pm/hooks/.gitleaks.toml
+# Canonical location: <pm repo>/hooks/.gitleaks.toml
 # Per-repo overrides: place .gitleaks.toml in repo root
 
 title = "Pre-commit hook gitleaks config"

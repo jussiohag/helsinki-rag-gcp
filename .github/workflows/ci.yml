@@ -1,5 +1,5 @@
 name: CI
-# Template v2.3.0 — source: ~/Desktop/coding/pm/hooks/ci-templates/ci.yml
+# Template v2.3.0 — source: <pm repo>/hooks/ci-templates/ci.yml
 
 # pull_request only: pre-push hooks already run tests locally; a push-to-main
 # run after every merge doubled Actions minutes for no signal.

@@ -24,10 +24,7 @@ Thumbs.db
 .playwright-mcp/
 test-results/
 
-# NOTE: CLAUDE.md, AGENTS.md, .hooks-config, .githooks/ are tracked
-# and safe in private repos. Before making ANY repo public, run:
-#   ~/Desktop/coding/pm/hooks/pre-publish-check.sh <path>
-# to remove them from tracking and scrub history if needed.
+# Agent instructions and local hook configuration stay out of the public tree.
 .venv/
 __pycache__/
 *.pyc
@@ -35,3 +32,11 @@ build/
 turns/*.jsonl
 .terraform/
 *.tfstate*
+
+# Added by pre-publish-check.sh
+.hooks-allowlist
+AGENTS.md
+CLAUDE.md
+.hooks-config
+.hooks-allowlist
+.githooks/

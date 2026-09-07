@@ -1,5 +1,0 @@
-# False-positive allowlist for .githooks/pre-commit PII scan.
-# Phone number below is public Helsinki open-data (a daycare's listed number in
-# data/helsinki_service_points.csv), used verbatim as a realistic fixture in
-# tests/test_ingest.py. Not a person's PII.
-\+358 9 310 41627
