@@ -11,6 +11,7 @@ runs the same way locally and on GCP through a small adapter layer.
 
 - [x] Phase 1: local twins. FastAPI request path, offline retriever,
       generator and guard, golden-set eval gate, web UI, architecture docs.
+      ✅ 2026-09-07
 - [ ] Phase 2: cloud deploy. Wire the Vertex AI Search, Gemini and Model
       Armor adapters to a real GCP project, deploy with Terraform, and
       confirm the latency budget holds under real network conditions.
