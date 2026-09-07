@@ -279,12 +279,10 @@ Running everything locally is convenient and is what CI actually
 exercises, but it does not validate:
 
 - **Real Vertex AI Search ranking quality.** `LocalRetriever` does plain
-  keyword substring scoring with no stemming, no synonym handling, and no
-  semantic matching — a trailing punctuation mark glued to the last word
-  of a query (e.g. a `?`) can make its term fail to substring-match at
-  all, something a real search backend would not exhibit. `hit_at_5=1.00`
-  on the golden set says this scorer works for those specific questions,
-  not that Vertex AI Search will rank the same way.
+  keyword substring scoring with no stemming, no synonym handling, and
+  no semantic matching. `hit_at_5=1.00` on the golden set says this
+  scorer works for those specific questions, not that Vertex AI Search
+  will rank the same way.
 - **Model Armor's actual policy behavior.** `HeuristicGuard` matches a
   short fixed phrase list and a character-count limit; it does not
   exercise Model Armor's real prompt-injection or jailbreak detection
