@@ -1,16 +1,22 @@
 name: PR Hygiene
 # Fails if PR body contains AI-generated footers, placeholder text, or is empty.
+# On public repositories also fails when tree, symlinks or history contain
+# local environment paths (see <pm repo>/docs/PUBLISHING-STANDARD.md).
 # Deploy: deploy-ci.sh (always deployed alongside other workflows)
 
 on:
   pull_request:
     types: [opened, edited, synchronize]
+  push:
+    branches: [main]
 
 permissions:
   pull-requests: read
+  contents: read
 
 jobs:
   pr-body-check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Check PR body for junk
@@ -78,3 +84,38 @@ jobs:
           fi
 
           echo "PR body is clean."
+
+  local-env:
+    # Runs on the remote so a skipped local hook cannot bypass it.
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Scan tree, symlinks and history for local environment paths
+        run: |
+          PAT='(/home|/Users)/[A-Za-z0-9_.-]+|~/[A-Za-z]|\$HOME/[A-Za-z]|[A-Za-z]:\\+Users\\+'
+          EXCL=(':!*.lock' ':!package-lock.json' ':!yarn.lock' ':!pnpm-lock.yaml' ':!*.min.*')
+          found=0
+          echo "== tracked files"
+          git grep -I -n -E "$PAT" -- . "${EXCL[@]}" && found=1
+          echo "== tracked symlinks"
+          while read -r mode _blob _stage path; do
+            [ "$mode" = 120000 ] || continue
+            target=$(git cat-file -p ":$path")
+            if echo "$target" | grep -qE "$PAT"; then echo "$path -> $target"; found=1; fi
+          done < <(git ls-files -s)
+          echo "== history"
+          git rev-list --all | xargs -r git grep -I -n -E "$PAT" -- . "${EXCL[@]}" \
+            | sed -E 's/^[0-9a-f]{40}://' | sort -u | grep . && found=1
+          while read -r _src mode _old blob _status path; do
+            [ "$mode" = 120000 ] || continue
+            target=$(git cat-file -p "$blob")
+            if echo "$target" | grep -qE "$PAT"; then echo "$path -> $target (history)"; found=1; fi
+          done < <(git log --all --format= --raw --diff-filter=A --no-renames | sort -u)
+          if [ "$found" = 1 ]; then
+            echo "::error::Local environment paths in a public repository. Rewrite the lines or scrub history."
+            exit 1
+          fi
+          echo "clean"
